@@ -1,0 +1,35 @@
+name: Build & Deploy KACA Homepage
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 6시간마다 자동 빌드
+  push:
+    branches: [main, master]
+  workflow_dispatch:  # 수동 트리거
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build static site
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: python build.py
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: kaca-homepage
+          directory: output

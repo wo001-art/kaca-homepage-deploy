@@ -1,0 +1,84 @@
+{
+  "basic": {
+    "label": "Basic (80~100만)",
+    "pages": 5,
+    "checklist": {
+      "page_main": {"label": "메인페이지", "scope": "page", "required": true},
+      "page_about": {"label": "소개 페이지", "scope": "page", "required": true},
+      "page_services": {"label": "서비스/프로그램 페이지", "scope": "page", "required": true},
+      "page_contact": {"label": "문의 페이지", "scope": "page", "required": true},
+      "page_faq": {"label": "FAQ 페이지", "scope": "page", "required": true},
+      "func_responsive": {"label": "반응형 (모바일/태블릿/데스크톱)", "scope": "feature", "required": true},
+      "func_seo_basic": {"label": "기본 SEO (메타태그, sitemap)", "scope": "feature", "required": true},
+      "func_notion_cms": {"label": "Notion CMS 연동", "scope": "backend", "required": true},
+      "func_contact_form": {"label": "문의폼 (이메일 전송)", "scope": "backend", "required": true},
+      "func_deploy": {"label": "Vercel 배포", "scope": "deploy", "required": true}
+    },
+    "not_included": [
+      "갤러리 페이지",
+      "공지사항 페이지",
+      "검색/필터 기능",
+      "Band 동기화",
+      "회원 로그인",
+      "결제 시스템",
+      "다국어 지원",
+      "고급 애니메이션"
+    ]
+  },
+  "standard": {
+    "label": "Standard (120~150만)",
+    "pages": 7,
+    "checklist": {
+      "page_main": {"label": "메인페이지", "scope": "page", "required": true},
+      "page_about": {"label": "소개 페이지", "scope": "page", "required": true},
+      "page_services": {"label": "서비스/프로그램 페이지", "scope": "page", "required": true},
+      "page_contact": {"label": "문의 페이지", "scope": "page", "required": true},
+      "page_events": {"label": "전시/이벤트 페이지", "scope": "page", "required": true},
+      "page_gallery": {"label": "갤러리 페이지", "scope": "page", "required": true},
+      "page_notice": {"label": "공지사항 페이지", "scope": "page", "required": true},
+      "func_responsive": {"label": "반응형 (모바일/태블릿/데스크톱)", "scope": "feature", "required": true},
+      "func_seo_basic": {"label": "기본 SEO (메타태그, sitemap)", "scope": "feature", "required": true},
+      "func_animation": {"label": "인터랙션 애니메이션", "scope": "feature", "required": true},
+      "func_search_filter": {"label": "검색/필터 기능 (갤러리)", "scope": "feature", "required": true},
+      "func_notion_cms": {"label": "Notion CMS 연동", "scope": "backend", "required": true},
+      "func_contact_form": {"label": "문의폼 (이메일 전송)", "scope": "backend", "required": true},
+      "func_band_sync": {"label": "n8n Band 동기화", "scope": "backend", "required": true},
+      "func_deploy": {"label": "Vercel 배포", "scope": "deploy", "required": true}
+    },
+    "not_included": [
+      "회원 로그인",
+      "결제 시스템",
+      "다국어 지원",
+      "관리자 대시보드",
+      "실시간 채팅"
+    ]
+  },
+  "premium": {
+    "label": "Premium (200~250만)",
+    "pages": 10,
+    "checklist": {
+      "page_main": {"label": "메인페이지", "scope": "page", "required": true},
+      "page_about": {"label": "소개 페이지", "scope": "page", "required": true},
+      "page_services": {"label": "서비스/프로그램 페이지", "scope": "page", "required": true},
+      "page_contact": {"label": "문의 페이지", "scope": "page", "required": true},
+      "page_events": {"label": "전시/이벤트 페이지", "scope": "page", "required": true},
+      "page_gallery": {"label": "갤러리 페이지", "scope": "page", "required": true},
+      "page_notice": {"label": "공지사항 페이지", "scope": "page", "required": true},
+      "page_members": {"label": "회원 전용 페이지", "scope": "page", "required": true},
+      "page_shop": {"label": "제품/결제 페이지", "scope": "page", "required": true},
+      "page_admin": {"label": "관리자 대시보드", "scope": "page", "required": true},
+      "func_responsive": {"label": "반응형 (모바일/태블릿/데스크톱)", "scope": "feature", "required": true},
+      "func_seo_advanced": {"label": "고급 SEO (구조화데이터, og:image, canonical)", "scope": "feature", "required": true},
+      "func_animation": {"label": "풀커스텀 애니메이션", "scope": "feature", "required": true},
+      "func_search_filter": {"label": "검색/필터 기능", "scope": "feature", "required": true},
+      "func_i18n": {"label": "다국어 지원 (한/영)", "scope": "feature", "required": true},
+      "func_notion_cms": {"label": "Notion CMS 연동", "scope": "backend", "required": true},
+      "func_contact_form": {"label": "문의폼 (이메일 전송)", "scope": "backend", "required": true},
+      "func_band_sync": {"label": "n8n Band 동기화", "scope": "backend", "required": true},
+      "func_auth": {"label": "회원 로그인/인증 (NextAuth)", "scope": "backend", "required": true},
+      "func_payment": {"label": "결제 시스템 연동", "scope": "backend", "required": true},
+      "func_deploy": {"label": "Vercel 배포", "scope": "deploy", "required": true}
+    },
+    "not_included": []
+  }
+}
