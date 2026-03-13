@@ -44,13 +44,34 @@
 | **Band 동기화** | **대기** | 대표님 지시: 대기 |
 | **Vercel 배포** | **대기** | 최종 확인 후 배포 |
 
-## 로그인 추가 옵션 (고객 문의)
+## 로그인 추가 옵션 (고객 문의) — v3 최신
 - **방식**: 자격증 발급 시 Notion에서 계정 자동 생성 (핸드폰번호=아이디)
 - **비번 초기화**: 자격증번호 입력 → 리셋
 - **일반인 가입 불가** (관리자만 계정 생성)
-- **추가 비용**: +35만원 (서비스 3개 포함)
-- **총합**: Standard(120만) + 로그인(35만) = 155만 (VAT별도)
-- **견적 이미지**: claude_tmp/login_pricing_table-*.png
+- **유료 항목**: Notion 회원DB + 인증API(15만) + 로그인 페이지(5만) = +20만원
+- **서비스 제공(무료)**: 비밀번호 초기화, 회원전용 라우트, 게시판/전용 페이지, 기존 페이지 권한
+- **총합**: Standard(120만) + 로그인(20만) = **140만원 (VAT별도)**
+- **Notion 요구사항**: Notion Pro 플랜 ($10/월, 약 1.3만원) 권장
+- **견적 이미지**: claude_tmp/login_pricing_v3-*.png (최신)
+
+## Vercel 배포 URL (절대 혼동 금지)
+| URL | 용도 | Vercel 프로젝트 | ⚠️ 주의사항 |
+|-----|------|----------------|------------|
+| **kaca-proposal.vercel.app** | **제안서 페이지** (Next.js + Notion CMS) | kaca-proposal | **절대 덮어쓰기 금지! 제안서 전용** |
+| **kaca-homepage-deploy.vercel.app** | **홈페이지** (최신, 작업중) | kaca-homepage-deploy | 홈페이지 전용 |
+| kaca-homepage.vercel.app | ⚠️ 구버전 (사용X, 덮어씌워짐) | kaca-homepage | 사용 금지 |
+| kaca-deploy.vercel.app | ⚠️ 구버전 (사용X) | kaca-deploy | 사용 금지 |
+| wo001-art.github.io/kaca-homepage/ | 5p Basic 샘플 | GitHub Pages | - |
+
+## 제안서 페이지 상세 (kaca-proposal) — 절대 덮어쓰기 금지
+- **URL**: https://kaca-proposal.vercel.app
+- **기술**: Next.js 14 + Notion API (ISR 60초)
+- **Git 원본**: kaca-homepage 레포 commit `004832d`
+- **Notion 페이지 ID**: `312765eb-4694-81d9-9baa-f39099d7a0df` (고객 공유용 제안서)
+- **Notion 페이지 제목**: "한국아트크래프트협회 홈페이지 제작 제안서"
+- **Vercel 환경변수**: NOTION_TOKEN + NOTION_PAGE_ID (312765eb469481d99baaf39099d7a0df)
+- **섹션**: 프로젝트 개요 / 기술 구성 / 홈페이지 구성(7p) / 참고 사이트 분석 / 패키지 안내(3티어) / 월 유지보수 / 진행 프로세스 / 준비사항 / 문의
+- **사고 이력**: 2026-03-11 잘못된 Notion 페이지 ID(318765eb=견적DB)로 배포 → 다른 내용 표시 → 올바른 ID(312765eb-81d9)로 복구 완료
 
 ## 오케스트레이터 프로젝트
 - **slug**: kaca-2026
@@ -96,6 +117,31 @@
 - **Vercel**: https://kaca-homepage-deploy.vercel.app
 - **레포**: kaca-homepage-deploy (clean, no secrets)
 - **소스**: C:\Users\Administrator\Documents\ClaudeCodeHub\kaca-homepage
+
+## n8n WF (홈페이지 관련)
+| WF ID | 이름 | 상태 | 용도 |
+|-------|------|------|------|
+| FWXDVdlYMrBH4hXH | HP - 견적서 자동생성 [Auto] | ON | 견적서 자동생성 (Webhook 트리거, Notion 상태변경→접수 시 실행) |
+| SL7JvxXrditA68Fs | HP - 홈페이지 에이전트 도구 [Webhook] | ON | 통합 에이전트 도구 (6개 브랜치 Switch) |
+
+### 통합 에이전트 도구 WF (SL7JvxXrditA68Fs)
+- **Webhook**: `https://n8n.wookvan.com/webhook/hp-agent-tool`
+- **호출**: `POST {action, data}` → Switch 노드로 분기
+- **브랜치 상태** (2026-03-13):
+
+| action | 기능 | 상태 | 구현 |
+|--------|------|------|------|
+| site-analyze | 경쟁사/참고사이트 분석 | ✅ | 딥리서치v2 WF 호출 (Perplexity sonar-pro) |
+| trend-crawl | 트렌드 분석 | ✅ | 딥리서치v2 WF 호출 (Perplexity sonar-pro) |
+| contact-form | 문의폼 Notion 접수 | ✅ | Notion API 직접호출 (견적DB) |
+| deploy | Vercel 배포 | ✅ | Vercel API |
+| lighthouse | 성능 측정 | ⏸ 보류 | PageSpeed API (미활성화) |
+| screenshot | 사이트 캡처 | ⏸ 보류 | placeholder |
+
+### 견적서 WF 변경 이력 (2026-03-13)
+- Schedule 트리거(1분 간격) → Webhook 트리거로 변경
+- Webhook: `https://n8n.wookvan.com/webhook/hp-estimate-trigger`
+- Notion DB 자동화에서 상태→접수 변경 시 webhook 호출하도록 설정 필요
 
 ## 기술 스택
 - Next.js 14.2.21 + React 18.3.1 + TypeScript
