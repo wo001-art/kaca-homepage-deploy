@@ -1,7 +1,7 @@
 # 홈페이지 제작 팀에이전트 → n8n WF 전환 구현 가이드
 
-> **목표**: n8n WF가 메인 오케스트레이터. AI Agent/Code 노드로 작업 수행. Claude 토큰 → 거의 0
-> **작성일**: 2026-03-13 (v3 테크니컬 라이터 검수)
+> **목표**: n8n WF가 메인 오케스트레이터. Code 노드(뼈대) + AI Agent 노드(LLM 마무리) → WF 내 완결. 별도 Python 팀에이전트 완전 제거.
+> **작성일**: 2026-03-13 (v4 AI Agent 노드 방식 + 모델 선정)
 > **대상 독자**: n8n WF 구축자 (Claude / 코어AI)
 
 ---
@@ -51,9 +51,12 @@
 ```
 
 - n8n WF가 오케스트레이터
-- AI 작업: Gemini 2.0 Flash + Perplexity sonar-pro (Claude 토큰 = 0)
-- 코드 생성: Code 노드 템플릿 (JS, 토큰 = 0)
+- AI 작업: Gemini 2.0 Flash + Perplexity sonar-pro
+- 코드 생성: Code 노드 템플릿 (JS, 토큰 = 0) → 80% 뼈대
+- **코드 마무리: AI Agent 노드 (LLM) → 20% 디테일 커스텀 (KACA 수준 퀄리티 확보)**
+- LLM 후보: DeepSeek V3/Coder, Claude Sonnet, Gemini 2.5 Pro (모델 선정 테스트 후 결정)
 - 병렬 처리: Switch + Merge
+- **Python 팀에이전트 완전 제거** — 모든 작업이 WF 안에서 완결
 
 ---
 
@@ -155,10 +158,11 @@ if (pageCount >= 10 || features.some(f => ['로그인','결제','다국어'].inc
   │   └─ Code → tailwind.config + globals.css
   │
   ├─ [Phase 4: 코드 생성] ──────────── 병렬 (핵심)
-  │   ├─ Code × 5 → 페이지 템플릿 (hero/about/programs/contact/faq)
+  │   ├─ Code × 5 → 페이지 템플릿 뼈대 (hero/about/programs/contact/faq)
   │   ├─ AI Agent (Gemini) → SEO 메타 × 5p
   │   ├─ Code → layout.tsx + Nav + Footer
-  │   └─ Merge (전체 코드)
+  │   ├─ Merge (전체 코드)
+  │   └─ **AI Agent (LLM) → 코드 품질 마무리** (디테일 커스텀, 애니메이션, 반응형 보정)
   │
   ├─ [Phase 5: 백엔드] ─────────────── 병렬
   │   ├─ HTTP → Notion CMS DB 생성
@@ -448,57 +452,56 @@ Discord 알림:
 | Frontend | Sonnet | Next.js 페이지/컴포넌트 코드 | frontend_agent.md |
 | Backend | Sonnet | API Route, Notion CMS, 배포 | backend_agent.md |
 
-### After: 1개 감독 에이전트 (Haiku) + n8n WF
+### After: n8n WF 완전 자립 (Python 팀에이전트 제거)
 
-| 역할 | 담당 | 모델 | 작업 |
-|------|------|------|------|
-| **WF 실행** | n8n | - | 전체 작업 (리서치→코드생성→배포) |
-| **감독/검증** | Claude (Haiku) | Haiku | WF 결과 확인, 예외 처리, Discord 보고 |
+| 역할 | 담당 | 비고 |
+|------|------|------|
+| **WF 실행** | n8n | 전체 작업 (리서치→코드생성→마무리→배포) |
+| **코드 뼈대** | Code 노드 (JS 템플릿) | 토큰 0 |
+| **코드 마무리** | AI Agent 노드 (LLM) | 디테일 커스텀, 품질 확보 |
+| **리서치/분석** | AI Agent 노드 (Gemini/Perplexity) | WF 내 호출 |
+| **감독/알림** | n8n Error Trigger + Discord | 에러 시 자동 알림 |
 
-### 감독 에이전트 역할 (최소한)
+**Python 팀에이전트 6개 완전 제거** — 모든 작업이 n8n WF 안에서 AI Agent 노드 + Code 노드로 완결.
+
+### AI Agent 노드 활용 방식
 
 ```
-1. 의뢰 접수 감지 → WF 트리거 확인
-2. 각 Phase 완료 알림 수신 → 결과 간단 검증
-3. 승인 게이트 → 대표님에게 확인 요청 전달
-4. 에러 발생 시 → 판단 후 재시도 or 대표님 보고
-5. 최종 완료 → 고객 납품 보고
+[Code 노드] → 80% 뼈대 (레이아웃 + 컴포넌트 + 디자인토큰 적용)
+     ↓
+[AI Agent 노드 (LLM)] → 20% 마무리 (디테일 커스텀 + 애니메이션 + 반응형 보정)
+     ↓
+[결과] → KACA 수준 퀄리티
 ```
 
-**토큰 사용량**: ~10K (기존 ~400K 대비 97% 절감)
+- AI Agent 노드: n8n 내장 — LLM 연결만 하면 프롬프트 기반 코드 수정 가능
+- LLM Chain 노드: 단순 변환 작업 (SEO 메타, 텍스트 생성)에 적합
+- OpenAI 호환 API 지원 → DeepSeek 등 외부 모델도 바로 연결
 
-### 프롬프트 단순화
+### 모델 선정 테스트 (구현 전 수행)
 
-기존 6개 프롬프트 파일 → 1개로 통합:
+| 후보 모델 | 특징 | 테스트 항목 |
+|-----------|------|-----------|
+| **DeepSeek V3/Coder** | 코드 특화, 가성비 최상 | 코드 품질, 속도, 비용 |
+| **Claude Sonnet** | 코드 품질 최상, 단가 높음 | 품질 상한선 기준 |
+| **Gemini 2.5 Pro** | n8n Credential 이미 있음, 무료 | 품질, 한국어 지원 |
 
-```markdown
-# 홈페이지 제작 감독 에이전트 (Haiku)
-
-## 역할
-n8n WF가 실행하는 홈페이지 제작 작업을 감독합니다.
-
-## 할 일
-1. WF 실행 결과를 확인하고 문제가 있으면 보고
-2. 승인 게이트에서 대표님에게 확인 요청
-3. 에러 발생 시 재시도 판단
-4. 완료 시 Discord 보고
-
-## 하지 않을 일
-- 코드 직접 작성 (WF Code 노드가 담당)
-- 사이트 분석 (WF 딥리서치가 담당)
-- 디자인 결정 (WF Gemini가 담당)
-- Notion/Vercel API 직접 호출 (WF HTTP Request가 담당)
-```
+**테스트 방법** (서버 클로드가 수행):
+1. 동일 페이지(hero 섹션) 생성 프롬프트로 3개 모델 비교
+2. 평가 기준: 코드 정확도, 디자인 퀄리티, 반응형, 한국어, 속도
+3. 비용 대비 품질 매트릭스 → 최적 모델 선정
+4. n8n AI Agent 노드에 선정 모델 Credential 연결
 
 ### 파일 변경 목록
 
 | 파일 | 변경 |
 |------|------|
-| `homepage_orchestrator.py` | `orchestrate()` 단순화 — WF 트리거 + 결과 확인만 |
-| `state_manager.py` | 삭제 또는 경량화 — Notion DB가 상태 관리 |
-| `wf_client.py` | 단일 엔드포인트 (`hp-homepage-build`) |
-| `prompts/*.md` (6개) | 1개로 통합 (`supervisor_agent.md`) |
+| `homepage_orchestrator.py` | **삭제** — n8n WF가 완전 대체 |
+| `state_manager.py` | **삭제** — Notion DB가 상태 관리 |
+| `wf_client.py` | **삭제** — WF가 자체 HTTP Request 사용 |
+| `prompts/*.md` (6개) | **삭제** — AI Agent 노드 프롬프트로 대체 (WF 내 인라인) |
 | `package_checklist.json` | 유지 (WF 완료 시 자동 체크) |
+| `homepage_agent_gate.py` (훅) | **삭제** — 직접 수정 게이트 불필요 |
 
 ---
 
@@ -569,39 +572,50 @@ n8n WF가 실행하는 홈페이지 제작 작업을 감독합니다.
 ```
 [현재] Python 오케스트레이터 + Claude 6개 에이전트
   ↓
-[Phase A] WF-Basic 구축 + 테스트 (신규 의뢰만)
+[Phase A] 모델 선정 테스트 (서버 클로드가 DeepSeek/Sonnet/Gemini 비교)
   ↓
-[Phase B] WF-Standard/Premium 구축
+[Phase B] WF-Basic 구축 + AI Agent 노드(선정 모델) + 테스트
   ↓
-[Phase C] 기존 오케스트레이터 → 감독 에이전트로 단순화
+[Phase C] WF-Standard/Premium 확장
   ↓
-[Phase D] 기존 프롬프트 6개 → supervisor_agent.md 1개로 통합
+[Phase D] Python 팀에이전트 코드 전체 삭제
   ↓
-[최종] n8n WF 메인 + Claude 감독(Haiku) 보조
+[최종] n8n WF 완전 자립 (Python 코드 0, Claude 토큰 0)
 ```
 
 ### 병행 운영 기간
 
-- Phase A~B 동안: 기존 시스템과 WF를 병행
+- Phase B~C 동안: 기존 시스템과 WF를 병행
 - 신규 의뢰 → WF로 처리
 - 기존 진행중 의뢰 (KACA 등) → 기존 시스템으로 완료
-- WF 안정화 확인 후 기존 시스템 비활성화
+- WF 안정화 확인 후 Phase D에서 Python 코드 전체 삭제
 
-### 보존 파일
+### 파일 처리
 
 | 파일 | 처리 |
 |------|------|
-| `homepage_orchestrator.py` | 경량화 (WF 트리거만) |
-| `state_manager.py` | 아카이브 (Notion DB로 대체) |
-| `wf_client.py` | 경량화 (단일 엔드포인트) |
-| `prompts/*.md` (6개) | 아카이브 + `supervisor_agent.md` 신규 |
-| `package_checklist.json` | 유지 |
+| `homepage_orchestrator.py` | **삭제** (n8n WF가 대체) |
+| `state_manager.py` | **삭제** (Notion DB가 대체) |
+| `wf_client.py` | **삭제** (WF 자체 HTTP Request) |
+| `prompts/*.md` (6개) | **삭제** (AI Agent 노드 인라인 프롬프트) |
+| `homepage_agent_gate.py` | **삭제** (직접 수정 게이트 불필요) |
+| `package_checklist.json` | 유지 (WF 완료 시 자동 체크) |
 
 ---
 
 ## 13. 구현 순서
 
-### Phase 1: WF-Basic 구축 (최우선)
+### Phase 0: 모델 선정 테스트 (최우선)
+
+- [ ] 테스트 프롬프트 준비 (hero 섹션 코드 생성)
+- [ ] DeepSeek V3/Coder 테스트 (OpenAI 호환 API → n8n AI Agent 노드)
+- [ ] Claude Sonnet 테스트 (품질 상한선 기준)
+- [ ] Gemini 2.5 Pro 테스트 (기존 Credential 활용)
+- [ ] 비교 매트릭스 작성 (품질/속도/비용/한국어)
+- [ ] 최적 모델 선정 → n8n Credential 등록
+- [ ] **담당**: 서버 클로드 (EC2)
+
+### Phase 1: WF-Basic 구축
 
 - [ ] Webhook 트리거 (`hp-homepage-build`)
 - [ ] 패키지 판별 Code 노드
@@ -609,6 +623,7 @@ n8n WF가 실행하는 홈페이지 제작 작업을 감독합니다.
 - [ ] AI Agent (Gemini) 사이트맵 생성
 - [ ] 디자인 토큰 추출 (Gemini)
 - [ ] Code 노드 페이지 템플릿 5개 (hero/about/programs/contact/faq)
+- [ ] AI Agent 노드 (선정 모델) → 코드 품질 마무리 노드 추가
 - [ ] 공통 컴포넌트 (layout/Nav/Footer/ScrollReveal)
 - [ ] Notion CMS DB 생성 + API Route
 - [ ] GitHub push + Vercel 배포
@@ -627,12 +642,14 @@ n8n WF가 실행하는 홈페이지 제작 작업을 감독합니다.
 - [ ] 회원/결제/관리자 페이지 템플릿 추가
 - [ ] NextAuth + 토스페이먼츠 + i18n 추가
 
-### Phase 4: 팀에이전트 단순화
+### Phase 4: Python 팀에이전트 전체 삭제
 
-- [ ] `supervisor_agent.md` 프롬프트 작성
-- [ ] `homepage_orchestrator.py` WF 트리거 전용으로 경량화
-- [ ] `wf_client.py` 단일 엔드포인트 업데이트
-- [ ] 기존 6개 프롬프트 아카이브
+- [ ] `homepage_orchestrator.py` 삭제
+- [ ] `state_manager.py` 삭제
+- [ ] `wf_client.py` 삭제
+- [ ] `prompts/*.md` 6개 삭제
+- [ ] `homepage_agent_gate.py` 훅 삭제
+- [ ] CLAUDE.md 홈페이지 작업 규칙 업데이트 (팀에이전트 경유 → WF로 변경)
 
 ### Phase 5: 승인 게이트 + 자동화
 
@@ -647,14 +664,15 @@ n8n WF가 실행하는 홈페이지 제작 작업을 감독합니다.
 
 | 항목 | Before (Claude 에이전트) | After (n8n WF) |
 |------|------------------------|----------------|
-| AI 모델 | Sonnet × 6 에이전트 | Gemini Flash + Perplexity |
-| Claude 토큰 | ~400K/프로젝트 | **~10K (감독만)** |
-| 비용 | 높음 (Claude API) | **낮음 (Gemini 무료 + Perplexity 저가)** |
+| AI 모델 | Sonnet × 6 에이전트 | **LLM(선정 후 결정) + Gemini + Perplexity** |
+| Claude 토큰 | ~400K/프로젝트 | **0 (WF 내 AI Agent 노드가 대체)** |
+| 비용 | 높음 (Claude API) | **낮음 (DeepSeek/Gemini 가성비 모델)** |
 | 실행 방식 | 순차 (에이전트 간 대기) | **병렬 (Switch+Merge)** |
 | 오케스트레이터 | Claude PM 에이전트 | **n8n WF** |
-| 코드 생성 | Claude가 직접 작성 | **Code 노드 템플릿** |
+| 코드 생성 | Claude가 직접 작성 | **Code 노드(뼈대) + AI Agent 노드(마무리)** |
+| 코드 퀄리티 | KACA 수준 (Sonnet 반복 수정) | **KACA 수준 (템플릿 + LLM 1회 마무리)** |
 | 상태 관리 | state_manager.py (JSON) | **Notion DB (상태 속성)** |
 | 승인 게이트 | Python 코드 내 분기 | **Notion 상태 → Webhook** |
 | 에러 처리 | 에이전트 재시도 (토큰 소비) | **n8n 자동 재시도 (토큰 0)** |
-| 에이전트 수 | 6개 (Sonnet) | **1개 감독 (Haiku)** |
-| 프롬프트 | 6개 파일 (총 ~2000줄) | **1개 파일 (~30줄)** |
+| Python 코드 | 6개 에이전트 + 오케스트레이터 + 상태관리 | **전부 삭제 (WF로 완전 대체)** |
+| 프롬프트 | 6개 파일 (총 ~2000줄) | **AI Agent 노드 내 인라인 (~수십줄)** |
